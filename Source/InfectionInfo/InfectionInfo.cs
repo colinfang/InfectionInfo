@@ -1,4 +1,4 @@
-﻿#nullable enable
+#nullable enable
 
 using System;
 using System.Collections.Generic;
@@ -346,6 +346,21 @@ namespace CF_InfectionInfo
             // Trigger only if Health panel is active.
             if (GenTicks.TicksGame % 60 == 0)
             {
+                InfectionUtililty.GcAndUpdate();
+            }
+        }
+    }
+
+    [HarmonyPatch(typeof(InspectTabBase))]
+    [HarmonyPatch(nameof(InspectTabBase.OnOpen))]
+    public class PatchOnOpen
+    {
+        public static void Postfix(InspectTabBase __instance)
+        {
+            // Update just before the tab is drawn so the data is latest. 
+            if (__instance is ITab_Pawn_Health)
+            {
+                // Log.Message("InfectionUtililty OnOpen");
                 InfectionUtililty.GcAndUpdate();
             }
         }
