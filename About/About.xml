@@ -19,6 +19,6 @@
   <loadAfter>
     <li>brrainz.harmony</li>
   </loadAfter>
-  <description>Ever wondering why those nasty infections occur so often? This is a QoL mod that attempts to demystify the infection mechanism behind the scenes. It displays the real time infection chance and uncovers the influential factors. It provides an option to make the infection chance rely on the current room cleanliness instead of that at the time of tending. (Default off)</description>
+  <description>Ever wondering why those nasty infections occur so often? This is a QoL mod that attempts to demystify the infection mechanism behind the scenes. It displays the real time infection chance and uncovers the influential factors. It provides an option to make the infection chance rely on the current room cleanliness instead of that at the time of tending (Default off). It highlights when the immunity gain is so slow that a pawn might die. </description>
 </ModMetaData>
 

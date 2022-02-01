@@ -1,4 +1,4 @@
-#nullable enable
+﻿#nullable enable
 
 using System;
 using System.Collections.Generic;
@@ -243,7 +243,7 @@ namespace CF_InfectionInfo
     [HarmonyPatch(nameof(HediffStatsUtility.SpecialDisplayStats))]
     public class PatchHediffStatsUtilitySpecialDisplayStats
     {
-        public static IEnumerable<StatDrawEntry> BuildExtraEntries(HediffWithComps hediff)
+        public static IEnumerable<StatDrawEntry> InfectionDetails(HediffWithComps hediff)
         {
             if (InfectionUtililty.InfectionDataDict.TryGetValue(hediff, out var data))
             {
@@ -272,11 +272,21 @@ namespace CF_InfectionInfo
             }
         }
 
+        public static IEnumerable<StatDrawEntry> ImmunizableDetails(HediffWithComps hediff)
+        {
+            if (ImmunizableUtililty.ImmunizableDataDict.TryGetValue(hediff, out var data))
+            {
+                string placeholder = "Tell me what is this";
+                yield return new StatDrawEntry(StatCategoryDefOf.Basics, "Severity at immunity", data.SeverityWhenImmune.ToStringByStyle(ToStringStyle.PercentOne), placeholder, 4040);
+            }
+        }
+
+
         public static void Postfix(ref IEnumerable<StatDrawEntry> __result, Hediff instance)
         {
             if (instance is HediffWithComps hediff)
             {
-                __result = __result.Concat(BuildExtraEntries(hediff));
+                __result = __result.Concat(InfectionDetails(hediff)).Concat(ImmunizableDetails(hediff));
             }
         }
     }
@@ -333,6 +343,7 @@ namespace CF_InfectionInfo
         {
             // Is there a better place to reset?
             InfectionUtililty.InfectionDataDict.Clear();
+            ImmunizableUtililty.ImmunizableDataDict.Clear();
             Log.Message("InfectionInfo utililty resets");
         }
     }
@@ -347,6 +358,7 @@ namespace CF_InfectionInfo
             if (GenTicks.TicksGame % 60 == 0)
             {
                 InfectionUtililty.GcAndUpdate();
+                ImmunizableUtililty.GcAndUpdate();
             }
         }
     }
@@ -358,10 +370,12 @@ namespace CF_InfectionInfo
         public static void Postfix(InspectTabBase __instance)
         {
             // Update just before the tab is drawn so the data is latest.
+            // TODO: What about Dialog_InfoCard?
             if (__instance is ITab_Pawn_Health)
             {
                 // Log.Message("InfectionInfo utility OnOpen");
                 InfectionUtililty.GcAndUpdate();
+                ImmunizableUtililty.GcAndUpdate();
             }
         }
     }
@@ -374,6 +388,7 @@ namespace CF_InfectionInfo
         {
             // Log.Message($"Remove hediff {__instance.pawn}:{__instance}");
             InfectionUtililty.InfectionDataDict.Remove(__instance);
+            ImmunizableUtililty.ImmunizableDataDict.Remove(__instance);
         }
     }
 
@@ -386,6 +401,163 @@ namespace CF_InfectionInfo
             if (Patcher.Settings.UseCurrentRoomForInfection)
             {
                 InfectionUtililty.F_infectionChanceFactorFromTendRoom.SetValue(__instance, InfectionUtililty.GetInfectionChanceFactorFromCurrentRoom(__instance.Pawn.GetRoom()));
+            }
+        }
+    }
+
+
+    public static class ImmunizableUtililty
+    {
+        public class ImmunizableData
+        {
+            public HediffComp_Immunizable Immunizable;
+            public float SeverityWhenImmune;
+            public string? ImmunizableSymbol;
+
+
+            public ImmunizableData(HediffComp_Immunizable immunizable)
+            {
+                // Log.Message($"Init ImmunizableData {immunizable.Pawn} {immunizable.parent}");
+                Immunizable = immunizable;
+                Update();
+            }
+
+            public override string ToString()
+            {
+                var hediff = Immunizable.parent;
+                return $"ImmunizableData({Immunizable.Pawn}:{hediff}:{Immunizable}:{ImmunizableSymbol}:{SeverityWhenImmune:F3})";
+            }
+
+            public void Update()
+            {
+                // This is added in `ImmunityHandler.ImmunityHandlerTick`
+                var ir = Immunizable.Pawn.health.immunity.GetImmunityRecord(Immunizable.Def);
+                if (ir is null)
+                {
+                    return;
+                }
+                var hediff = Immunizable.parent;
+                float tend = hediff.TryGetComp<HediffComp_TendDuration>()?.SeverityChangePerDay() ?? 0;
+                float severityChangePerDay = Immunizable.SeverityChangePerDay() + tend;
+                float immunityChangePerDay = ir.ImmunityChangePerTick(Immunizable.Pawn, sick: true, hediff) * GenDate.TicksPerDay;
+                float immunity = Immunizable.Immunity;
+                float severity = hediff.Severity;
+                SeverityWhenImmune = (1 - immunity) * severityChangePerDay / immunityChangePerDay + severity;
+                ImmunizableSymbol = GetImmunizableSymbol();
+            }
+
+            public string? GetImmunizableSymbol()
+            {
+                // Cached in ImmunizableSymbol via Tick
+                var suffix = "☠";
+                if (SeverityWhenImmune > 0.99) {
+                    return suffix;
+                }
+                return null;
+            }
+        }
+
+
+        public static Dictionary<HediffWithComps, ImmunizableData> ImmunizableDataDict = new();
+
+
+        [DebugAction("InfectionInfo", null, false, false, actionType = DebugActionType.Action, allowedGameStates = AllowedGameStates.PlayingOnMap)]
+        public static void LogImmunizableDataDict()
+        {
+            foreach (var kv in ImmunizableDataDict)
+            {
+                Log.Message(kv.Value.ToString());
+            }
+        }
+
+        public static bool ImmunizableCheckFrequently(HediffComp_Immunizable immunizable)
+        {
+            if (immunizable.Pawn.Dead)
+            {
+                return false;
+            }
+
+            if (immunizable.FullyImmune)
+            {
+                return false;
+            }
+
+            return true;
+        }
+
+
+        public static void GcAndUpdate()
+        {
+            // Log.Message("ImmunizableUtililty GcAndUpdate");
+
+            List<HediffWithComps> toRemove = new();
+            foreach (var kv in ImmunizableDataDict)
+            {
+                var hediff = kv.Key;
+                var data = kv.Value;
+                if (!ImmunizableCheckFrequently(data.Immunizable))
+                {
+                    toRemove.Add(hediff);
+                    // Log.Message($"Remove {data}");
+                    continue;
+                }
+                data.Update();
+            }
+            foreach (var hediff in toRemove)
+            {
+                ImmunizableDataDict.Remove(hediff);
+            }
+        }
+
+        public static ImmunizableData? CheckAndRegister(HediffComp_Immunizable immunizable)
+        {
+            if (!ImmunizableCheckFrequently(immunizable))
+            {
+                return null;
+            }
+            ImmunizableData data = new(immunizable);
+            // Not sure if there is duplicate, so not using Add
+            ImmunizableDataDict[immunizable.parent] = data;
+            return data;
+        }
+
+    }
+
+
+    [HarmonyPatch(typeof(HediffComp_Immunizable))]
+    [HarmonyPatch(nameof(HediffComp_Immunizable.CompPostPostAdd))]
+    public class PatchHediffComp_ImmunizableCompPostPostAdd
+    {
+        public static void Postfix(HediffComp_Immunizable __instance) => ImmunizableUtililty.CheckAndRegister(__instance);
+    }
+
+
+    [HarmonyPatch(typeof(HediffComp_Immunizable))]
+    [HarmonyPatch(nameof(HediffComp_Immunizable.CompExposeData))]
+    public class PatchHediffComp_ImmunizableExposeData
+    {
+        public static void Postfix(HediffComp_Immunizable __instance)
+        {
+            if (Scribe.mode == LoadSaveMode.PostLoadInit)
+            {
+                ImmunizableUtililty.CheckAndRegister(__instance);
+            }
+        }
+    }
+
+
+    [HarmonyPatch(typeof(Hediff))]
+    [HarmonyPatch(nameof(Hediff.LabelBase), MethodType.Getter)]
+    public class PatchHediffWithCompsLabelBase
+    {
+        public static void Postfix(ref string __result, Hediff __instance)
+        {
+            if ((__instance is HediffWithComps hediff) && ImmunizableUtililty.ImmunizableDataDict.TryGetValue(hediff, out var data))
+            {
+                if (data.ImmunizableSymbol is not null)
+                {
+                    __result += " " + data.ImmunizableSymbol;
+                }
             }
         }
     }
