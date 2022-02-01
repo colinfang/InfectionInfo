@@ -75,10 +75,11 @@ namespace CF_InfectionInfo
                     baseInfectionChance *= 0.1f;
                 }
 
-                // Log.Message($"Init {infecter.parent} {infecter.Pawn}");
+                // Log.Message($"Init InfecterData {infecter.Pawn} {infecter.parent}");
 
                 Infecter = infecter;
                 BaseInfectionChance = baseInfectionChance;
+                Update();
             }
 
             public int Age => Infecter.parent.ageTicks;
@@ -98,7 +99,7 @@ namespace CF_InfectionInfo
             public void Update()
             {
                 var hediff = Infecter.parent;
-                InfectionChanceFactorFromSeverity = InfectionChanceFactorFromSeverityCurve.Evaluate(hediff.Severity); 
+                InfectionChanceFactorFromSeverity = InfectionChanceFactorFromSeverityCurve.Evaluate(hediff.Severity);
                 InfectionChanceFactorFromRoom = Patcher.Settings.UseCurrentRoomForInfection ? GetInfectionChanceFactorFromCurrentRoom(Infecter.Pawn.GetRoom()) : (float)F_infectionChanceFactorFromTendRoom.GetValue(Infecter);
 
                 var tendDuration = hediff.TryGetComp<HediffComp_TendDuration>();
@@ -158,7 +159,7 @@ namespace CF_InfectionInfo
         // If room is null, fall back to roomless (note it is still possible to be considered roomless even if not null.)
         public static float GetInfectionChanceFactorFromCurrentRoom(Room? room) => room?.GetStat(RoomStatDefOf.InfectionChanceFactor) ?? RoomStatDefOf.InfectionChanceFactor.roomlessScore;
 
-        public static bool CanInfectCheckOnce(HediffWithComps parent)
+        public static bool CanInfectCheckUponRegister(HediffWithComps parent)
         {
             // Follow HediffComp_Infecter.CompPostPostAdd logic
             // Skip rng test
@@ -224,12 +225,11 @@ namespace CF_InfectionInfo
         public static InfecterData? CheckAndRegister(HediffComp_Infecter infecter)
         {
             var hediff = infecter.parent;
-            if (!CanInfectCheckFrequently(infecter) || !CanInfectCheckOnce(hediff))
+            if (!CanInfectCheckFrequently(infecter) || !CanInfectCheckUponRegister(hediff))
             {
                 return null;
             }
             InfecterData data = new(infecter);
-            data.Update();
             // Not sure if there is duplicate, so not using Add
             InfectionDataDict[hediff] = data;
             return data;
@@ -289,23 +289,6 @@ namespace CF_InfectionInfo
     }
 
 
-    [HarmonyPatch(typeof(Hediff_Injury))]
-    [HarmonyPatch(nameof(Hediff_Injury.LabelBase), MethodType.Getter)]
-    public class PatchHediff_InjuryLabelInBrackets
-    {
-        public static void Postfix(ref string __result, Hediff_Injury __instance)
-        {
-            if (InfectionUtililty.InfectionDataDict.TryGetValue(__instance, out var data))
-            {
-                if (data.InfectionSymbol is not null)
-                {
-                    __result += " " + data.InfectionSymbol;
-                }
-            }
-        }
-    }
-
-
     [HarmonyPatch(typeof(HediffComp_Infecter))]
     [HarmonyPatch(nameof(HediffComp_Infecter.CompExposeData))]
     public class PatchHediff_HediffComp_InfecterExposeData
@@ -325,6 +308,23 @@ namespace CF_InfectionInfo
     }
 
 
+    [HarmonyPatch(typeof(Hediff_Injury))]
+    [HarmonyPatch(nameof(Hediff_Injury.LabelBase), MethodType.Getter)]
+    public class PatchHediff_InjuryLabelBase
+    {
+        public static void Postfix(ref string __result, Hediff_Injury __instance)
+        {
+            if (InfectionUtililty.InfectionDataDict.TryGetValue(__instance, out var data))
+            {
+                if (data.InfectionSymbol is not null)
+                {
+                    __result += " " + data.InfectionSymbol;
+                }
+            }
+        }
+    }
+
+
     [HarmonyPatch(typeof(PostLoadIniter))]
     [HarmonyPatch(nameof(PostLoadIniter.DoAllPostLoadInits))]
     public class PatchHediff_PostLoadIniterDoAllPostLoadInits
@@ -333,7 +333,7 @@ namespace CF_InfectionInfo
         {
             // Is there a better place to reset?
             InfectionUtililty.InfectionDataDict.Clear();
-            Log.Message("InfectionUtililty resets");
+            Log.Message("InfectionInfo utililty resets");
         }
     }
 
@@ -357,20 +357,20 @@ namespace CF_InfectionInfo
     {
         public static void Postfix(InspectTabBase __instance)
         {
-            // Update just before the tab is drawn so the data is latest. 
+            // Update just before the tab is drawn so the data is latest.
             if (__instance is ITab_Pawn_Health)
             {
-                // Log.Message("InfectionUtililty OnOpen");
+                // Log.Message("InfectionInfo utility OnOpen");
                 InfectionUtililty.GcAndUpdate();
             }
         }
     }
 
-    [HarmonyPatch(typeof(Hediff_Injury))]
-    [HarmonyPatch(nameof(Hediff_Injury.PostRemoved))]
-    public class PatchHediff_InjuryPostRemoved
+    [HarmonyPatch(typeof(HediffWithComps))]
+    [HarmonyPatch(nameof(HediffWithComps.PostRemoved))]
+    public class PatchHediffWithCompsPostRemoved
     {
-        public static void Postfix(Hediff_Injury __instance)
+        public static void Postfix(HediffWithComps __instance)
         {
             // Log.Message($"Remove hediff {__instance.pawn}:{__instance}");
             InfectionUtililty.InfectionDataDict.Remove(__instance);
