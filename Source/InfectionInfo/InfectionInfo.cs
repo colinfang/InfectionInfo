@@ -46,7 +46,7 @@ namespace CF_InfectionInfo
 
     public class Settings: ModSettings
     {
-        public bool UseCurrentRoomForInfection;
+        public bool UseCurrentRoomForInfection = false;
 
         public override void ExposeData()
         {
