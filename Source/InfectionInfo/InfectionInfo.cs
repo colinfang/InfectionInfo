@@ -56,7 +56,7 @@ namespace CF_InfectionInfo
     }
 
 
-    public static class InfectionUtililty
+    public static class InfectionUtility
     {
         public class InfecterData
         {
@@ -140,12 +140,12 @@ namespace CF_InfectionInfo
 
         public static bool IsSafe(int age) => age > HealthTuning.InfectionDelayRange.max;
 
-        public static Dictionary<HediffWithComps, InfecterData> InfectionDataDict = new();
-        public static int AlreadyMadeInfectionValue = (int)typeof(HediffComp_Infecter).GetField("AlreadyMadeInfectionValue", BindingFlags.NonPublic | BindingFlags.Static).GetValue(null);
-        public static FieldInfo F_ticksUntilInfect = typeof(HediffComp_Infecter).GetField("ticksUntilInfect", BindingFlags.NonPublic | BindingFlags.Instance);
-        public static FieldInfo F_infectionChanceFactorFromTendRoom = typeof(HediffComp_Infecter).GetField("infectionChanceFactorFromTendRoom", BindingFlags.NonPublic | BindingFlags.Instance);
-        public static SimpleCurve InfectionChanceFactorFromTendQualityCurve = (SimpleCurve)typeof(HediffComp_Infecter).GetField("InfectionChanceFactorFromTendQualityCurve", BindingFlags.NonPublic | BindingFlags.Static).GetValue(null);
-        public static SimpleCurve InfectionChanceFactorFromSeverityCurve = (SimpleCurve)typeof(HediffComp_Infecter).GetField("InfectionChanceFactorFromSeverityCurve", BindingFlags.NonPublic | BindingFlags.Static).GetValue(null);
+        public static readonly Dictionary<HediffWithComps, InfecterData> InfectionDataDict = new();
+        public static readonly int AlreadyMadeInfectionValue = (int)typeof(HediffComp_Infecter).GetField("AlreadyMadeInfectionValue", BindingFlags.NonPublic | BindingFlags.Static).GetValue(null);
+        public static readonly FieldInfo F_ticksUntilInfect = typeof(HediffComp_Infecter).GetField("ticksUntilInfect", BindingFlags.NonPublic | BindingFlags.Instance);
+        public static readonly FieldInfo F_infectionChanceFactorFromTendRoom = typeof(HediffComp_Infecter).GetField("infectionChanceFactorFromTendRoom", BindingFlags.NonPublic | BindingFlags.Instance);
+        public static readonly SimpleCurve InfectionChanceFactorFromTendQualityCurve = (SimpleCurve)typeof(HediffComp_Infecter).GetField("InfectionChanceFactorFromTendQualityCurve", BindingFlags.NonPublic | BindingFlags.Static).GetValue(null);
+        public static readonly SimpleCurve InfectionChanceFactorFromSeverityCurve = (SimpleCurve)typeof(HediffComp_Infecter).GetField("InfectionChanceFactorFromSeverityCurve", BindingFlags.NonPublic | BindingFlags.Static).GetValue(null);
 
         [DebugAction("InfectionInfo", null, false, false, actionType = DebugActionType.Action, allowedGameStates = AllowedGameStates.PlayingOnMap)]
         public static void LogInfectionDataDict()
@@ -201,7 +201,7 @@ namespace CF_InfectionInfo
 
         public static void GcAndUpdate()
         {
-            // Log.Message("InfectionUtililty GcAndUpdate");
+            // Log.Message("InfectionUtility GcAndUpdate");
 
             List<HediffWithComps> toRemove = new();
             foreach (var kv in InfectionDataDict)
@@ -245,7 +245,7 @@ namespace CF_InfectionInfo
     {
         public static IEnumerable<StatDrawEntry> InfectionDetails(HediffWithComps hediff)
         {
-            if (InfectionUtililty.InfectionDataDict.TryGetValue(hediff, out var data))
+            if (InfectionUtility.InfectionDataDict.TryGetValue(hediff, out var data))
             {
                 string placeholder = "Tell me what is this";
                 yield return new StatDrawEntry(StatCategoryDefOf.Basics, "Infection chance", data.TotalInfectionChance.ToStringByStyle(ToStringStyle.PercentZero), placeholder, 4040);
@@ -274,7 +274,7 @@ namespace CF_InfectionInfo
 
         public static IEnumerable<StatDrawEntry> ImmunizableDetails(HediffWithComps hediff)
         {
-            if (ImmunizableUtililty.ImmunizableDataDict.TryGetValue(hediff, out var data))
+            if (ImmunizableUtility.ImmunizableDataDict.TryGetValue(hediff, out var data))
             {
                 string placeholder = "Tell me what is this";
                 yield return new StatDrawEntry(StatCategoryDefOf.Basics, "Severity at immunity", data.SeverityWhenImmune.ToStringByStyle(ToStringStyle.PercentOne), placeholder, 4040);
@@ -295,7 +295,7 @@ namespace CF_InfectionInfo
     [HarmonyPatch(nameof(HediffComp_Infecter.CompPostPostAdd))]
     public class PatchHediff_HediffComp_InfecterCompPostPostAdd
     {
-        public static void Postfix(HediffComp_Infecter __instance) => InfectionUtililty.CheckAndRegister(__instance);
+        public static void Postfix(HediffComp_Infecter __instance) => InfectionUtility.CheckAndRegister(__instance);
     }
 
 
@@ -312,7 +312,7 @@ namespace CF_InfectionInfo
                 // And `Pawn.GetRoom` is null
                 // So after the game is loaded & paused, the immediate stats are wrong until a further update is called when the game resumes.
                 // Is there a better place to init this?
-                InfectionUtililty.CheckAndRegister(__instance);
+                InfectionUtility.CheckAndRegister(__instance);
             }
         }
     }
@@ -324,7 +324,7 @@ namespace CF_InfectionInfo
     {
         public static void Postfix(ref string __result, Hediff_Injury __instance)
         {
-            if (InfectionUtililty.InfectionDataDict.TryGetValue(__instance, out var data))
+            if (InfectionUtility.InfectionDataDict.TryGetValue(__instance, out var data))
             {
                 if (data.InfectionSymbol is not null)
                 {
@@ -342,8 +342,8 @@ namespace CF_InfectionInfo
         public static void Prefix()
         {
             // Is there a better place to reset?
-            InfectionUtililty.InfectionDataDict.Clear();
-            ImmunizableUtililty.ImmunizableDataDict.Clear();
+            InfectionUtility.InfectionDataDict.Clear();
+            ImmunizableUtility.ImmunizableDataDict.Clear();
             Log.Message("InfectionInfo utililty resets");
         }
     }
@@ -357,8 +357,8 @@ namespace CF_InfectionInfo
             // Trigger only if Health panel is active.
             if (GenTicks.TicksGame % 60 == 0)
             {
-                InfectionUtililty.GcAndUpdate();
-                ImmunizableUtililty.GcAndUpdate();
+                InfectionUtility.GcAndUpdate();
+                ImmunizableUtility.GcAndUpdate();
             }
         }
     }
@@ -374,8 +374,8 @@ namespace CF_InfectionInfo
             if (__instance is ITab_Pawn_Health)
             {
                 // Log.Message("InfectionInfo utility OnOpen");
-                InfectionUtililty.GcAndUpdate();
-                ImmunizableUtililty.GcAndUpdate();
+                InfectionUtility.GcAndUpdate();
+                ImmunizableUtility.GcAndUpdate();
             }
         }
     }
@@ -387,8 +387,8 @@ namespace CF_InfectionInfo
         public static void Postfix(HediffWithComps __instance)
         {
             // Log.Message($"Remove hediff {__instance.pawn}:{__instance}");
-            InfectionUtililty.InfectionDataDict.Remove(__instance);
-            ImmunizableUtililty.ImmunizableDataDict.Remove(__instance);
+            InfectionUtility.InfectionDataDict.Remove(__instance);
+            ImmunizableUtility.ImmunizableDataDict.Remove(__instance);
         }
     }
 
@@ -400,13 +400,13 @@ namespace CF_InfectionInfo
         {
             if (Patcher.Settings.UseCurrentRoomForInfection)
             {
-                InfectionUtililty.F_infectionChanceFactorFromTendRoom.SetValue(__instance, InfectionUtililty.GetInfectionChanceFactorFromCurrentRoom(__instance.Pawn.GetRoom()));
+                InfectionUtility.F_infectionChanceFactorFromTendRoom.SetValue(__instance, InfectionUtility.GetInfectionChanceFactorFromCurrentRoom(__instance.Pawn.GetRoom()));
             }
         }
     }
 
 
-    public static class ImmunizableUtililty
+    public static class ImmunizableUtility
     {
         public class ImmunizableData
         {
@@ -488,7 +488,7 @@ namespace CF_InfectionInfo
 
         public static void GcAndUpdate()
         {
-            // Log.Message("ImmunizableUtililty GcAndUpdate");
+            // Log.Message("ImmunizableUtility GcAndUpdate");
 
             List<HediffWithComps> toRemove = new();
             foreach (var kv in ImmunizableDataDict)
@@ -528,7 +528,7 @@ namespace CF_InfectionInfo
     [HarmonyPatch(nameof(HediffComp_Immunizable.CompPostPostAdd))]
     public class PatchHediffComp_ImmunizableCompPostPostAdd
     {
-        public static void Postfix(HediffComp_Immunizable __instance) => ImmunizableUtililty.CheckAndRegister(__instance);
+        public static void Postfix(HediffComp_Immunizable __instance) => ImmunizableUtility.CheckAndRegister(__instance);
     }
 
 
@@ -540,7 +540,7 @@ namespace CF_InfectionInfo
         {
             if (Scribe.mode == LoadSaveMode.PostLoadInit)
             {
-                ImmunizableUtililty.CheckAndRegister(__instance);
+                ImmunizableUtility.CheckAndRegister(__instance);
             }
         }
     }
@@ -552,7 +552,7 @@ namespace CF_InfectionInfo
     {
         public static void Postfix(ref string __result, Hediff __instance)
         {
-            if ((__instance is HediffWithComps hediff) && ImmunizableUtililty.ImmunizableDataDict.TryGetValue(hediff, out var data))
+            if ((__instance is HediffWithComps hediff) && ImmunizableUtility.ImmunizableDataDict.TryGetValue(hediff, out var data))
             {
                 if (data.ImmunizableSymbol is not null)
                 {
