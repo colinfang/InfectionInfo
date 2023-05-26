@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<LanguageData>
+
+	<IIUseCurrentRoomForInfectionChance>使用当前房间计算感染几率</IIUseCurrentRoomForInfectionChance>
+	<IIUseCurrentRoomForInfectionChanceDes>原版使用治疗时房间清洁度来调整感染几率。这个选项让游戏使用当前房间来代替。</IIUseCurrentRoomForInfectionChanceDes>
+	
+	<IIInfectionChance>感染几率</IIInfectionChance>
+	<IIBaseValue>    基础值</IIBaseValue>
+	<IIFromCurrentRoom>    当前房间</IIFromCurrentRoom>
+	<IIFromTendRoom>    治疗房间</IIFromTendRoom>
+	<IIFromTendQuality>    治疗质量</IIFromTendQuality>
+	<IIFromSeverity>    伤口严重性</IIFromSeverity>
+	<IIDangerIn>    危险期于</IIDangerIn>
+	<IISafeIn>    安全期于</IISafeIn>
+	<IIHour>小时</IIHour>
+	<IISeverityAtImmunity>免疫时严重性</IISeverityAtImmunity>
+
+</LanguageData>
