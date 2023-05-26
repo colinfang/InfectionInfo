@@ -14,11 +14,11 @@ using System.Reflection;
 
 namespace CF_InfectionInfo
 {
-    public class Patcher: Mod
+    public class Patcher : Mod
     {
         public static Settings Settings = new();
 
-        public Patcher(ModContentPack pack): base(pack)
+        public Patcher(ModContentPack pack) : base(pack)
         {
             Settings = GetSettings<Settings>();
             DoPatching();
@@ -32,7 +32,7 @@ namespace CF_InfectionInfo
         {
             Listing_Standard listingStandard = new();
             listingStandard.Begin(inRect);
-            listingStandard.CheckboxLabeled("Use current room for infection chance", ref Settings.UseCurrentRoomForInfection, "Base game uses room cleanliness at tend time to adjust infection chance. This option makes the game to consider the current room instead.");
+            listingStandard.CheckboxLabeled(TranslatorFormattedStringExtensions.Translate("IIUseCurrentRoomForInfectionChance"), ref Settings.UseCurrentRoomForInfection, TranslatorFormattedStringExtensions.Translate("IIUseCurrentRoomForInfectionChanceDes"));
             listingStandard.End();
             base.DoSettingsWindowContents(inRect);
         }
@@ -44,7 +44,7 @@ namespace CF_InfectionInfo
         }
     }
 
-    public class Settings: ModSettings
+    public class Settings : ModSettings
     {
         public bool UseCurrentRoomForInfection = false;
 
@@ -248,26 +248,26 @@ namespace CF_InfectionInfo
             if (InfectionUtility.InfectionDataDict.TryGetValue(hediff, out var data))
             {
                 string placeholder = "Tell me what is this";
-                yield return new StatDrawEntry(StatCategoryDefOf.Basics, "Infection chance", data.TotalInfectionChance.ToStringByStyle(ToStringStyle.PercentZero), placeholder, 4040);
-                yield return new StatDrawEntry(StatCategoryDefOf.Basics, "    Base value", data.BaseInfectionChance.ToStringByStyle(ToStringStyle.PercentZero), placeholder, 4040);
+                yield return new StatDrawEntry(StatCategoryDefOf.Basics, TranslatorFormattedStringExtensions.Translate("IIInfectionChance"), data.TotalInfectionChance.ToStringByStyle(ToStringStyle.PercentZero), placeholder, 4040);
+                yield return new StatDrawEntry(StatCategoryDefOf.Basics, TranslatorFormattedStringExtensions.Translate("IIBaseValue"), data.BaseInfectionChance.ToStringByStyle(ToStringStyle.PercentZero), placeholder, 4040);
 
                 if (data.InfectionChanceFactorFromRoom != 1)
                 {
-                    yield return new StatDrawEntry(StatCategoryDefOf.Basics, Patcher.Settings.UseCurrentRoomForInfection ? "    From current room" : "    From tend room", $"x{data.InfectionChanceFactorFromRoom.ToStringByStyle(ToStringStyle.PercentZero)}", placeholder, 4040);
+                    yield return new StatDrawEntry(StatCategoryDefOf.Basics, Patcher.Settings.UseCurrentRoomForInfection ? TranslatorFormattedStringExtensions.Translate("IIFromCurrentRoom") : TranslatorFormattedStringExtensions.Translate("IIFromTendRoom"), $"x{data.InfectionChanceFactorFromRoom.ToStringByStyle(ToStringStyle.PercentZero)}", placeholder, 4040);
                 }
                 if (data.InfectionChanceFactorFromTendQuality != 1)
                 {
-                    yield return new StatDrawEntry(StatCategoryDefOf.Basics, "    From tend quality", $"x{data.InfectionChanceFactorFromTendQuality.ToStringByStyle(ToStringStyle.PercentZero)}", placeholder, 4040);
+                    yield return new StatDrawEntry(StatCategoryDefOf.Basics, TranslatorFormattedStringExtensions.Translate("IIFromTendQuality"), $"x{data.InfectionChanceFactorFromTendQuality.ToStringByStyle(ToStringStyle.PercentZero)}", placeholder, 4040);
                 }
 
-                yield return new StatDrawEntry(StatCategoryDefOf.Basics, "    From severity", $"x{data.InfectionChanceFactorFromSeverity.ToStringByStyle(ToStringStyle.PercentZero)}", placeholder, 4040);
+                yield return new StatDrawEntry(StatCategoryDefOf.Basics, TranslatorFormattedStringExtensions.Translate("IIFromSeverity"), $"x{data.InfectionChanceFactorFromSeverity.ToStringByStyle(ToStringStyle.PercentZero)}", placeholder, 4040);
                 if (data.IsGrace)
                 {
-                    yield return new StatDrawEntry(StatCategoryDefOf.Basics, "    Danger in", $"{(float)data.TicksUntilDanger / GenDate.TicksPerHour:F1} Hour", placeholder, 4040);
+                    yield return new StatDrawEntry(StatCategoryDefOf.Basics, TranslatorFormattedStringExtensions.Translate("IIDangerIn"), $"{(float)data.TicksUntilDanger / GenDate.TicksPerHour:F1} " + TranslatorFormattedStringExtensions.Translate("IIHour"), placeholder, 4040);
                 }
                 else if (data.IsDanger)
                 {
-                    yield return new StatDrawEntry(StatCategoryDefOf.Basics, "    Safe in", $"{(float)data.TicksUntilSafe / GenDate.TicksPerHour:F1} Hour", placeholder, 4040);
+                    yield return new StatDrawEntry(StatCategoryDefOf.Basics, TranslatorFormattedStringExtensions.Translate("IISafeIn"), $"{(float)data.TicksUntilSafe / GenDate.TicksPerHour:F1} " + TranslatorFormattedStringExtensions.Translate("IIHour"), placeholder, 4040);
                 }
             }
         }
@@ -277,7 +277,7 @@ namespace CF_InfectionInfo
             if (ImmunizableUtility.ImmunizableDataDict.TryGetValue(hediff, out var data))
             {
                 string placeholder = "Tell me what is this";
-                yield return new StatDrawEntry(StatCategoryDefOf.Basics, "Severity at immunity", data.SeverityWhenImmune.ToStringByStyle(ToStringStyle.PercentOne), placeholder, 4040);
+                yield return new StatDrawEntry(StatCategoryDefOf.Basics, TranslatorFormattedStringExtensions.Translate("IISeverityAtImmunity"), data.SeverityWhenImmune.ToStringByStyle(ToStringStyle.PercentOne), placeholder, 4040);
             }
         }
 
@@ -450,7 +450,8 @@ namespace CF_InfectionInfo
             {
                 // Cached in ImmunizableSymbol via Tick
                 var suffix = "☠";
-                if (SeverityWhenImmune > 0.99) {
+                if (SeverityWhenImmune > 0.99)
+                {
                     return suffix;
                 }
                 return null;
