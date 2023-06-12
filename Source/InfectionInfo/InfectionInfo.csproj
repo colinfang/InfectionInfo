@@ -36,6 +36,7 @@
   <ItemGroup>
     <Reference Include="0Harmony">
       <HintPath>D:\Project\InfectionInfo-master\Source\InfectionInfo\Lib\0Harmony.dll</HintPath>
+      <Private>False</Private>
     </Reference>
     <Reference Include="Assembly-CSharp">
       <HintPath>D:\Project\InfectionInfo-master\Source\InfectionInfo\Lib\Assembly-CSharp.dll</HintPath>

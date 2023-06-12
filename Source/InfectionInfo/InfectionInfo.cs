@@ -33,6 +33,15 @@ namespace CF_InfectionInfo
             Listing_Standard listingStandard = new();
             listingStandard.Begin(inRect);
             listingStandard.CheckboxLabeled(TranslatorFormattedStringExtensions.Translate("IIUseCurrentRoomForInfectionChance"), ref Settings.UseCurrentRoomForInfection, TranslatorFormattedStringExtensions.Translate("IIUseCurrentRoomForInfectionChanceDes"));
+            
+            listingStandard.Gap();
+            Settings.InfectionChanceColorY = listingStandard.SliderLabeled(TranslatorFormattedStringExtensions.Translate("IIInfectionChanceColorY") + ": " + Settings.InfectionChanceColorY.ToStringByStyle(ToStringStyle.PercentZero, ToStringNumberSense.Absolute), Settings.InfectionChanceColorY, 0f, 1f, 0.5f, TranslatorFormattedStringExtensions.Translate("IIInfectionChanceColorYDes"));
+            Settings.InfectionChanceColorR = listingStandard.SliderLabeled(TranslatorFormattedStringExtensions.Translate("IIInfectionChanceColorR") + ": " + Settings.InfectionChanceColorR.ToStringByStyle(ToStringStyle.PercentZero, ToStringNumberSense.Absolute), Settings.InfectionChanceColorR, 0f, 1f, 0.5f, TranslatorFormattedStringExtensions.Translate("IIInfectionChanceColorRDes"));
+            
+            listingStandard.Gap();
+            Settings.SeverityAtImmunityY = listingStandard.SliderLabeled(TranslatorFormattedStringExtensions.Translate("IISeverityAtImmunityY") + ": " + Settings.SeverityAtImmunityY.ToStringByStyle(ToStringStyle.PercentZero, ToStringNumberSense.Absolute), Settings.SeverityAtImmunityY, 0f, 1f, 0.5f, TranslatorFormattedStringExtensions.Translate("IISeverityAtImmunityYDes"));
+            Settings.SeverityAtImmunityR = listingStandard.SliderLabeled(TranslatorFormattedStringExtensions.Translate("IISeverityAtImmunityR") + ": " + Settings.SeverityAtImmunityR.ToStringByStyle(ToStringStyle.PercentZero, ToStringNumberSense.Absolute), Settings.SeverityAtImmunityR, 0f, 1f, 0.5f, TranslatorFormattedStringExtensions.Translate("IISeverityAtImmunityRDes"));
+            
             listingStandard.End();
             base.DoSettingsWindowContents(inRect);
         }
@@ -47,10 +56,18 @@ namespace CF_InfectionInfo
     public class Settings : ModSettings
     {
         public bool UseCurrentRoomForInfection = false;
+        public float InfectionChanceColorY = 0f;
+        public float InfectionChanceColorR = 0.1f;
+        public float SeverityAtImmunityY = 0.8f;
+        public float SeverityAtImmunityR = 1f;
 
         public override void ExposeData()
         {
             Scribe_Values.Look(ref UseCurrentRoomForInfection, "UseCurrentRoomForInfection", false);
+            Scribe_Values.Look(ref InfectionChanceColorY, "InfectionChanceColorY", 0f);
+            Scribe_Values.Look(ref InfectionChanceColorR, "InfectionChanceColorR", 0.1f);
+            Scribe_Values.Look(ref SeverityAtImmunityY, "SeverityAtImmunityY", 0.8f);
+            Scribe_Values.Look(ref SeverityAtImmunityR, "SeverityAtImmunityR", 1f);
             base.ExposeData();
         }
     }
@@ -58,6 +75,14 @@ namespace CF_InfectionInfo
 
     public static class InfectionUtility
     {
+        public static string InfectionColor(this string s,float InfectionChance)
+        {
+            if (InfectionChance >= Patcher.Settings.InfectionChanceColorR)
+                return s.Colorize(Color.red);
+            if (InfectionChance >= Patcher.Settings.InfectionChanceColorY)
+                return s.Colorize(Color.yellow);
+            return s;
+        }
         public class InfecterData
         {
             public HediffComp_Infecter Infecter;
@@ -125,14 +150,15 @@ namespace CF_InfectionInfo
                 }
                 else if (IsDanger)
                 {
-                    if (TotalInfectionChance < 0.1)
+                    /*if (TotalInfectionChance < 0.1)
                     {
                         return suffix.Colorize(Color.yellow);
                     }
                     else
                     {
                         return suffix.Colorize(Color.red);
-                    }
+                    }*/
+                    return suffix.InfectionColor(TotalInfectionChance);
                 }
                 return null;
             }
@@ -248,7 +274,7 @@ namespace CF_InfectionInfo
             if (InfectionUtility.InfectionDataDict.TryGetValue(hediff, out var data))
             {
                 string placeholder = "Tell me what is this";
-                yield return new StatDrawEntry(StatCategoryDefOf.Basics, TranslatorFormattedStringExtensions.Translate("IIInfectionChance"), data.TotalInfectionChance.ToStringByStyle(ToStringStyle.PercentZero), placeholder, 4040);
+                yield return new StatDrawEntry(StatCategoryDefOf.Basics, TranslatorFormattedStringExtensions.Translate("IIInfectionChance"), data.TotalInfectionChance.ToStringByStyle(ToStringStyle.PercentZero).InfectionColor(data.TotalInfectionChance), placeholder, 4040);
                 yield return new StatDrawEntry(StatCategoryDefOf.Basics, TranslatorFormattedStringExtensions.Translate("IIBaseValue"), data.BaseInfectionChance.ToStringByStyle(ToStringStyle.PercentZero), placeholder, 4040);
 
                 if (data.InfectionChanceFactorFromRoom != 1)
@@ -277,7 +303,7 @@ namespace CF_InfectionInfo
             if (ImmunizableUtility.ImmunizableDataDict.TryGetValue(hediff, out var data))
             {
                 string placeholder = "Tell me what is this";
-                yield return new StatDrawEntry(StatCategoryDefOf.Basics, TranslatorFormattedStringExtensions.Translate("IISeverityAtImmunity"), data.SeverityWhenImmune.ToStringByStyle(ToStringStyle.PercentOne), placeholder, 4040);
+                yield return new StatDrawEntry(StatCategoryDefOf.Basics, TranslatorFormattedStringExtensions.Translate("IISeverityAtImmunity"), data.SeverityWhenImmune.ToStringByStyle(ToStringStyle.PercentOne).ImmunizableColor(data.SeverityWhenImmune), placeholder, 4040);
             }
         }
 
@@ -408,6 +434,14 @@ namespace CF_InfectionInfo
 
     public static class ImmunizableUtility
     {
+        public static string ImmunizableColor(this string s, float SeverityAtImmunity)
+        {
+            if (SeverityAtImmunity >= Patcher.Settings.SeverityAtImmunityR)
+                return s.Colorize(Color.red);
+            if (SeverityAtImmunity >= Patcher.Settings.SeverityAtImmunityY)
+                return s.Colorize(Color.yellow);
+            return s;
+        }
         public class ImmunizableData
         {
             public HediffComp_Immunizable Immunizable;
@@ -450,9 +484,9 @@ namespace CF_InfectionInfo
             {
                 // Cached in ImmunizableSymbol via Tick
                 var suffix = "☠";
-                if (SeverityWhenImmune > 0.99)
+                if (SeverityWhenImmune > Patcher.Settings.SeverityAtImmunityY)
                 {
-                    return suffix;
+                    return suffix.ImmunizableColor(SeverityWhenImmune);
                 }
                 return null;
             }
